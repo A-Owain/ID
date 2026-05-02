@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Alraedah ID Card Generator</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    @font-face {
+      font-family: 'PingARLT';
+      src: url('./fonts/PingAR+LT-Regular.otf') format('opentype');
+      font-weight: 400;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'PingARLT';
+      src: url('./fonts/PingAR+LT-Medium.otf') format('opentype');
+      font-weight: 500;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'PingARLT';
+      src: url('./fonts/PingAR+LT-Bold.otf') format('opentype');
+      font-weight: 700;
+      font-display: swap;
+    }
+
+    :root {
+      --card-width: 153.36px;
+      --card-height: 245.52px;
+
+      --logo-row-height: 51.02px;
+      --portrait-row-height: 98.08px;
+      --details-row-height: 70.58px;
+      --footer-row-height: 25.84px;
+
+      --brand-blue: #314983;
+    }
+
+    * {
+      box-sizing: border-box;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+
+    body {
+      margin: 0;
+      padding: 30px;
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      align-items: flex-start;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .panel {
+      width: 360px;
+      background: #fff;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      font-size: 20px;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input,
+    select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 14px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: var(--brand-blue);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #111827;
+    }
+
+    button.light {
+      background: #6b7280;
+    }
+
+    #cropArea {
+      display: none;
+      margin-top: 14px;
+      padding: 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+    }
+
+    #cropImage {
+      max-width: 100%;
+      display: block;
+      border-radius: 8px;
+    }
+
+    .preview-wrapper {
+      background: #e5e7eb;
+      padding: 20px;
+      border-radius: 18px;
+    }
+
+    .id-card {
+      width: var(--card-width);
+      height: var(--card-height);
+      background: white;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows:
+        var(--logo-row-height)
+        var(--portrait-row-height)
+        var(--details-row-height)
+        var(--footer-row-height);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+
+    .row {
+      width: var(--card-width);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .logo-row {
+      height: var(--logo-row-height);
+    }
+
+    .logo-row img {
+      width: 86.46px;
+      height: 39.685px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .portrait-row {
+      height: var(--portrait-row-height);
+    }
+
+    .portrait-frame {
+      width: 79px;
+      height: 98px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .portrait-frame img {
+      width: 79px;
+      height: 98px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .details-row {
+      height: var(--details-row-height);
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: 'PingARLT', Arial, sans-serif;
+      color: #000;
+      padding: 0 8px;
+      gap: 1px;
+    }
+
+    .name,
+    .id-number,
+    .department,
+    .role {
+      width: 100%;
+      max-width: 137px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-align: center;
+      margin: 0;
+    }
+
+    .name {
+      font-size: 10pt;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    .id-number {
+      font-size: 8.5pt;
+      font-weight: 500;
+      line-height: 1;
+      padding-top: 3px;
+    }
+
+    .department {
+      font-size: 8.5pt;
+      font-weight: 500;
+      line-height: 1;
+      padding-top: 2px;
+    }
+
+    .role {
+      font-size: 10pt;
+      font-weight: 700;
+      line-height: 1.15;
+      padding-top: 3px;
+    }
+
+    .footer-row {
+      height: var(--footer-row-height);
+      background-color: var(--brand-blue) !important;
+      color: white !important;
+      font-family: 'PingARLT', Arial, sans-serif;
+      font-size: 8.5pt;
+      font-weight: 700;
+      line-height: 1.08;
+    }
+
+    @media print {
+      html,
+      body {
+        width: 5.41cm;
+        height: 8.66cm;
+        margin: 0;
+        padding: 0;
+        background: white;
+      }
+
+      body * {
+        visibility: hidden;
+      }
+
+      #card,
+      #card * {
+        visibility: visible;
+      }
+
+      #card {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 5.41cm;
+        height: 8.66cm;
+        box-shadow: none;
+      }
+
+      .panel,
+      .preview-wrapper {
+        display: none;
+      }
+
+      @page {
+        size: 5.41cm 8.66cm;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="panel">
+    <h2>ID Card Generator</h2>
+
+    <label>Default Avatar</label>
+    <select id="avatarType">
+      <option value="female">Female</option>
+      <option value="male">Male</option>
+    </select>
+
+    <label>Portrait</label>
+    <input type="file" id="portraitInput" accept="image/*">
+
+    <button type="button" class="light" onclick="resetToDefaultAvatar()">Use Default Avatar</button>
+
+    <div id="cropArea">
+      <img id="cropImage" alt="Crop Portrait">
+      <button type="button" onclick="applyCrop()">Apply Crop</button>
+    </div>
+
+    <label>Name</label>
+    <input type="text" id="nameInput" placeholder="Employee Name">
+
+    <label>ID Number</label>
+    <input type="text" id="idInput" placeholder="000">
+
+    <label>Department</label>
+    <input type="text" id="departmentInput" placeholder="Department">
+
+    <label>Role</label>
+    <input type="text" id="roleInput" placeholder="Role">
+
+    <button onclick="downloadCard()">Download PNG</button>
+    <button class="secondary" onclick="downloadPDF()">Download PDF</button>
+    <button class="light" onclick="printCard()">Print Card</button>
+  </div>
+
+  <div class="preview-wrapper">
+    <div id="card" class="id-card">
+
+      <div class="row logo-row">
+        <img src="logo.png" alt="Alraedah Logo">
+      </div>
+
+      <div class="row portrait-row">
+        <div class="portrait-frame">
+          <img id="portraitPreview" src="female.png" alt="Portrait">
+        </div>
+      </div>
+
+      <div class="row details-row">
+        <p id="namePreview" class="name">Employee Name</p>
+        <p id="idPreview" class="id-number">Employee ID: 000</p>
+        <p id="departmentPreview" class="department">Department: Department</p>
+        <p id="rolePreview" class="role">Role</p>
+      </div>
+
+      <div class="row footer-row">
+        www.alraedah.sa
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let cropper = null;
+    let isCustomImage = false;
+
+    const portraitInput = document.getElementById("portraitInput");
+    const cropArea = document.getElementById("cropArea");
+    const cropImage = document.getElementById("cropImage");
+    const portraitPreview = document.getElementById("portraitPreview");
+    const avatarType = document.getElementById("avatarType");
+
+    const nameInput = document.getElementById("nameInput");
+    const idInput = document.getElementById("idInput");
+    const departmentInput = document.getElementById("departmentInput");
+    const roleInput = document.getElementById("roleInput");
+
+    const namePreview = document.getElementById("namePreview");
+    const idPreview = document.getElementById("idPreview");
+    const departmentPreview = document.getElementById("departmentPreview");
+    const rolePreview = document.getElementById("rolePreview");
+
+    avatarType.addEventListener("change", function () {
+      if (!isCustomImage) {
+        portraitPreview.src = this.value === "male" ? "male.png" : "female.png";
+      }
+    });
+
+    function resetToDefaultAvatar() {
+      isCustomImage = false;
+      portraitInput.value = "";
+
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+
+      cropArea.style.display = "none";
+      portraitPreview.src = avatarType.value === "male" ? "male.png" : "female.png";
+    }
+
+    portraitInput.addEventListener("change", function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      isCustomImage = true;
+
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        cropImage.src = e.target.result;
+        cropArea.style.display = "block";
+
+        if (cropper) {
+          cropper.destroy();
+        }
+
+        cropper = new Cropper(cropImage, {
+          aspectRatio: 79 / 98,
+          viewMode: 1,
+          dragMode: "move",
+          autoCropArea: 1,
+          responsive: true,
+          background: false,
+          movable: true,
+          zoomable: true,
+          rotatable: false,
+          scalable: false
+        });
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    function applyCrop() {
+      if (!cropper) return;
+
+      const canvas = cropper.getCroppedCanvas({
+        width: 790,
+        height: 980,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: "high"
+      });
+
+      portraitPreview.src = canvas.toDataURL("image/png");
+
+      cropArea.style.display = "none";
+      cropper.destroy();
+      cropper = null;
+    }
+
+    function fitText(element, maxFontSize, minFontSize) {
+      let currentSize = maxFontSize;
+      element.style.fontSize = currentSize + "pt";
+
+      while (element.scrollWidth > element.offsetWidth && currentSize > minFontSize) {
+        currentSize -= 0.25;
+        element.style.fontSize = currentSize + "pt";
+      }
+    }
+
+    function updateName() {
+      namePreview.textContent = nameInput.value || "Employee Name";
+      fitText(namePreview, 10, 5.5);
+    }
+
+    function updateId() {
+      idPreview.textContent = idInput.value
+        ? `Employee ID: ${idInput.value}`
+        : "Employee ID: 000";
+
+      fitText(idPreview, 8.5, 5.5);
+    }
+
+    function updateDepartment() {
+      departmentPreview.textContent = departmentInput.value
+        ? `Department: ${departmentInput.value}`
+        : "Department: Department";
+
+      fitText(departmentPreview, 8.5, 5.5);
+    }
+
+    function updateRole() {
+      rolePreview.textContent = roleInput.value || "Role";
+      fitText(rolePreview, 10, 5.5);
+    }
+
+    function updateAllText() {
+      updateName();
+      updateId();
+      updateDepartment();
+      updateRole();
+    }
+
+    nameInput.addEventListener("input", updateName);
+    idInput.addEventListener("input", updateId);
+    departmentInput.addEventListener("input", updateDepartment);
+    roleInput.addEventListener("input", updateRole);
+
+    async function downloadCard() {
+      const card = document.getElementById("card");
+
+      await document.fonts.ready;
+
+      updateAllText();
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const canvas = await html2canvas(card, {
+        scale: 6,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        imageTimeout: 0,
+        logging: false
+      });
+
+      const link = document.createElement("a");
+      link.download = "alraedah-id-card.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    async function downloadPDF() {
+      const card = document.getElementById("card");
+
+      await document.fonts.ready;
+
+      updateAllText();
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const canvas = await html2canvas(card, {
+        scale: 6,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        imageTimeout: 0,
+        logging: false
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+
+      const { jsPDF } = window.jspdf;
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "cm",
+        format: [5.41, 8.66]
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, 5.41, 8.66);
+      pdf.save("alraedah-id-card.pdf");
+    }
+
+    function printCard() {
+      updateAllText();
+
+      setTimeout(() => {
+        window.print();
+      }, 50);
+    }
+
+    window.addEventListener("load", () => {
+      document.fonts.ready.then(() => {
+        updateAllText();
+      });
+    });
+  </script>
+
+</body>
+</html>
