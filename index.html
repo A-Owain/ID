@@ -327,7 +327,6 @@
 
     <button onclick="downloadCard()">Download PNG</button>
     <button class="secondary" onclick="downloadPDF()">Download PDF</button>
-    <button class="light" onclick="printCard()">Print Card</button>
   </div>
 
   <div class="preview-wrapper">
@@ -546,14 +545,6 @@
 
       pdf.addImage(imgData, "PNG", 0, 0, 5.41, 8.66);
       pdf.save("alraedah-id-card.pdf");
-    }
-
-    function printCard() {
-      updateAllText();
-
-      setTimeout(() => {
-        window.print();
-      }, 50);
     }
 
     window.addEventListener("load", () => {
